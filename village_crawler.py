@@ -139,75 +139,9 @@ def fetch_movie_info(movie_dict, imdb_api, movies_list):
     with results_lock:
         movies_list.append(movie_dict)
 
-def main():
-    data_path = "data.pkl"
-
-    if "clear" in sys.argv and os.path.exists(data_path):
-        result = input("Are you sure you want to remove data?")
-        
-        os.remove(data_path)
-
-    if os.path.exists(data_path):
-        with open(data_path, "rb") as pkl_handle:
-            sorted_movies = pickle.load(pkl_handle)
-    else:
-        # Create an instance of the IMDb class
-        imdb_api = Cinemagoer()
-      
-        # Create a list to store the extracted data
-        movies_list = []
-
-        movie_dicts = crawl_village_titles()
-
-        # Create a list to store the results
-        movies_list = []
-
-        # Create and start threads
-        threads = []
-        for movie_dict in movie_dicts:
-            thread = threading.Thread(target=fetch_movie_info, args=(movie_dict, imdb_api, movies_list))
-            thread.start()
-            threads.append(thread)
-
-        # Wait for all threads to finish
-        for thread in threads:
-            thread.join()
-
-        sorted_movies = sorted(movies_list, key=lambda m: m['imdb'] if m['imdb']!="?" else 0, reverse=True)
-
-        with open(data_path, "wb") as pkl_handle:
-            pickle.dump(sorted_movies, pkl_handle)
-
-    if(len(sorted_movies)==0):
-        result = input("No movies. Clear data?")
-        os.remove(data_path)
-
+def print_movies(sorted_movies, search_day):
     date_time = datetime.datetime.now()
-    search_day = date_time.strftime("%d/%m")
-    today = search_day
-
-    if(len(sys.argv)==2 and sys.argv[1]!="clear"):
-        search_day = sys.argv[1]
-
-    sorted_movies = [movie for movie in sorted_movies if search_day in movie["days"].keys()]
-
-    # Removes the movies that already exist but with some suffix like dolby atmos
-    sorted_movies = [movie for movie in sorted_movies if all(other["title"] not in movie["title"]
-        for other in sorted_movies if movie["title"]!=other["title"])]
-
-    # Merges the movies that exist both in gr and eng
-    # merged_movies = []
-    # for key, group in groupby(sorted_movies, key=lambda movie: movie['title'].replace("(ENG)", "").replace("(GR)", "").strip()):
-    #     group = list(group)
-    #     if len(group) == 2:
-    #         group = group[0]
-    #         merged_title = f"{key} (ENG-GR)"
-    #         merged_movies.append({"title": merged_title, 'days': group['days'], 
-    #             'imdb': group['imdb'], 'plot': group['plot'], "length": group['length'], "url": group['url']})
-    #     else:
-    #         merged_movies.extend(group)
-
-    # sorted_movies = merged_movies
+    today = date_time.strftime("%d/%m")
 
     for movie in sorted_movies:
         movie_start_times = []
@@ -304,6 +238,78 @@ def main():
             print(movie["plot"].center(columns))
 
         print()
+
+def main():
+    data_path = "data.pkl"
+
+    if "clear" in sys.argv and os.path.exists(data_path):
+        result = input("Are you sure you want to remove data?")
+        
+        os.remove(data_path)
+
+    if os.path.exists(data_path):
+        with open(data_path, "rb") as pkl_handle:
+            sorted_movies = pickle.load(pkl_handle)
+    else:
+        # Create an instance of the IMDb class
+        imdb_api = Cinemagoer()
+      
+        # Create a list to store the extracted data
+        movies_list = []
+
+        movie_dicts = crawl_village_titles()
+
+        # Create a list to store the results
+        movies_list = []
+
+        # Create and start threads
+        threads = []
+        for movie_dict in movie_dicts:
+            thread = threading.Thread(target=fetch_movie_info, args=(movie_dict, imdb_api, movies_list))
+            thread.start()
+            threads.append(thread)
+
+        # Wait for all threads to finish
+        for thread in threads:
+            thread.join()
+
+        sorted_movies = sorted(movies_list, key=lambda m: m['imdb'] if m['imdb']!="?" else 0, reverse=True)
+
+        with open(data_path, "wb") as pkl_handle:
+            pickle.dump(sorted_movies, pkl_handle)
+
+    if(len(sorted_movies)==0):
+        result = input("No movies. Clear data?")
+        os.remove(data_path)
+
+    date_time = datetime.datetime.now()
+    search_day = date_time.strftime("%d/%m")
+    today = search_day
+
+    if(len(sys.argv)==2 and sys.argv[1]!="clear"):
+        search_day = sys.argv[1]
+
+    sorted_movies = [movie for movie in sorted_movies if search_day in movie["days"].keys()]
+
+    # Removes the movies that already exist but with some suffix like dolby atmos
+    sorted_movies = [movie for movie in sorted_movies if all(other["title"] not in movie["title"]
+        for other in sorted_movies if movie["title"]!=other["title"])]
+
+    # Merges the movies that exist both in gr and eng
+    # merged_movies = []
+    # for key, group in groupby(sorted_movies, key=lambda movie: movie['title'].replace("(ENG)", "").replace("(GR)", "").strip()):
+    #     group = list(group)
+    #     if len(group) == 2:
+    #         group = group[0]
+    #         merged_title = f"{key} (ENG-GR)"
+    #         merged_movies.append({"title": merged_title, 'days': group['days'], 
+    #             'imdb': group['imdb'], 'plot': group['plot'], "length": group['length'], "url": group['url']})
+    #     else:
+    #         merged_movies.extend(group)
+
+    # sorted_movies = merged_movies
+
+    print_movies(sorted_movies, search_day)
 
 if __name__ == "__main__":
     main()
