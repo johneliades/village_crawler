@@ -7,5 +7,5 @@ information such as the plot and rating from IMDb, sorts them according
 to rating and presents them in an appealing and user-friendly manner.
 
 <p align="center">
-  <img src="https://github.com/johneliades/chess_cv/blob/main/preview.jpg" alt="animated" />
+  <img src="https://github.com/johneliades/village_crawler/blob/main/preview.jpg" alt="animated" />
 </p>
