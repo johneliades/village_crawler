@@ -62,10 +62,11 @@ def crawl_village_titles():
 
         days_hours_dict = {}
         hours = movie_soup.select('.str-time')
+        class_types = movie_soup.select('.type-item')
         availability = movie_soup.select('.availability')
-        for hour, available in zip(hours, availability):
-            if 'golden-class' in hour.parent['class']:
-                continue
+
+        lists = [hours, availability, class_types]
+        for hour, available, class_type in zip(*lists):
             key = hour.parent.parent.parent.get("id").replace("timeof", "")
 
             date_obj = datetime.datetime.strptime(key, '%Y%m%d')
@@ -73,7 +74,7 @@ def crawl_village_titles():
 
             if day not in days_hours_dict:
                 days_hours_dict[day] = []
-            days_hours_dict[day].append((hour.text, available['class'][1]))
+            days_hours_dict[day].append((hour.text, available['class'][1], class_type.text))
 
         movie_dict = {'title': title, 'days': days_hours_dict}
         movie_dicts.append(movie_dict)
@@ -212,20 +213,14 @@ def main():
         movie_start_times = []
         movie_end_times = []
         movie_availabilities = []
+        movie_classes = []
         if movie["length"]!=None:
             delta = datetime.timedelta(minutes=int(movie["length"])+14)
         else:
             delta = None
 
         for time_tuple in movie["days"][search_day]:
-            time, availability = time_tuple
-
-            if(availability == "available"):
-                movie_availabilities.append(bg.green)
-            elif(availability == "limited"):
-                movie_availabilities.append(bg.yellow)
-            elif(availability == "not available"):
-                movie_availabilities.append(bg.red)
+            time, availability, class_type = time_tuple
 
             formated_time = datetime.datetime.strptime(time, '%H:%M')
             if(delta!=None):
@@ -239,6 +234,20 @@ def main():
                 movie_start_times.append(time)
                 if(delta!=None):
                     movie_end_times.append(end_time.strftime('%H:%M'))
+
+            if(availability == "available"):
+                movie_availabilities.append(bg.green)
+            elif(availability == "limited"):
+                movie_availabilities.append(bg.yellow)
+            elif(availability == "not available"):
+                movie_availabilities.append(bg.red)
+
+            if("ΑΙΘ" in class_type):
+                movie_classes.append("")
+            elif("VMax" in class_type):
+                movie_classes.append("vmax ")
+            elif("GOLD" in class_type):
+                movie_classes.append("gold ")
 
         if(len(movie_start_times)==0):
             continue
@@ -266,17 +275,18 @@ def main():
 
         formatted_times = []
         if(delta!=None):
-            lists = [movie_start_times, movie_end_times, movie_availabilities]
-            for start, end, availability in zip(*lists):
+            lists = [movie_start_times, movie_end_times, movie_availabilities, movie_classes]
+            for start, end, availability, movie_class in zip(*lists):
                 formatted_times.append(
-                    f"{availability} {fg.clear_color} "
+                    f"{availability} {fg.clear_color} {movie_class}"
                     f"{fg.blue}{start}{fg.clear_color}-"
                     f"{fg.light_red}{end}{fg.clear_color}"
                 )
         else:
-            for start in movie_start_times:
+            lists = [movie_start_times, movie_availabilities, movie_classes]
+            for start, availability, movie_class in zip(*lists):
                 formatted_times.append(
-                    f"{availability} {fg.clear_color} "
+                    f"{availability} {fg.clear_color} {movie_class}"
                     f"{fg.blue}{start}{fg.clear_color}")
 
         print(fg.grey + movie["url"].center(columns) + fg.clear_color + '\n')
