@@ -5,3 +5,7 @@ this python script that retrieves a list of currently playing movies
 and the ticket availability and showtimes. It then fetches additional 
 information such as the plot and rating from IMDb, sorts them according
 to rating and presents them in an appealing and user-friendly manner.
+
+<p align="center">
+  <img src="https://github.com/johneliades/chess_cv/blob/main/preview.jpg" alt="animated" />
+</p>
