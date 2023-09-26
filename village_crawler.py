@@ -278,13 +278,24 @@ def main():
         with open(data_path, "wb") as pkl_handle:
             pickle.dump(sorted_movies, pkl_handle)
 
-    if(len(sorted_movies)==0):
+    date_time = datetime.datetime.now()
+
+    movie_days = []
+    for movie in sorted_movies:
+        for day in list(movie["days"].keys()):
+            day_obj = datetime.datetime.strptime(day, "%d/%m")
+            day_obj = day_obj.replace(year=datetime.datetime.now().year)
+
+            movie_days.append(day_obj)
+
+    movie_days = list(set(movie_days))
+    movie_days.sort()
+
+    if(len(sorted_movies)==0 or all([date_time.date() > day.date() for day in movie_days])):
         result = input("No movies. Clear data?")
         os.remove(data_path)
 
-    date_time = datetime.datetime.now()
     search_day = date_time.strftime("%d/%m")
-    today = search_day
 
     if(len(sys.argv)==2 and sys.argv[1]!="clear"):
         search_day = sys.argv[1]
