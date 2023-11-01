@@ -1,5 +1,3 @@
-
-Scripts
-Lib
+.venv
 pyvenv.cfg
 data.pkl
