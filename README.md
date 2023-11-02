@@ -22,15 +22,29 @@ decompressing the zip.
 
 Then install the missing libraries in a virtual environment:
 
+Windows
 ```
 python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt && deactivate
+```
+
+Linux
+```
+python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && deactivate
 ```
 
 ## Run
 
 Then you can run:
 
+Windows
 ```
 .venv\Scripts\activate
 python village_crawler.py
 ```
+
+Linux
+```
+source .venv/bin/activate
+python village_crawler.py
+```
+
