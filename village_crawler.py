@@ -86,7 +86,11 @@ def crawl_imdb_info(title, imdb_api):
     # Search for the movie by name
     movies = imdb_api.search_movie(title)
     if(movies):
-        movie = imdb_api.get_movie(movies[0].getID())
+        try:
+            movie = imdb_api.get_movie(movies[0].getID())
+        except:
+            print("Exception occured")
+            return None
 
         # Get the IMDb rating of the movie
         imdb_api.update(movie)
