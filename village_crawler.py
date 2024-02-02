@@ -84,7 +84,11 @@ def crawl_village_titles():
 
 def crawl_imdb_info(title, imdb_api):
     # Search for the movie by name
-    movies = imdb_api.search_movie(title)
+    try:
+        movies = imdb_api.search_movie(title)
+    except:
+        print("Exception occured")
+        return None
     if(movies):
         try:
             movie = imdb_api.get_movie(movies[0].getID())
