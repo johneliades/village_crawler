@@ -295,15 +295,18 @@ def main():
     movie_days = []
     for movie in sorted_movies:
         for day in list(movie["days"].keys()):
-            day_obj = datetime.datetime.strptime(day, "%d/%m")
-            day_obj = day_obj.replace(year=datetime.datetime.now().year)
+            day, month = map(int, day.split('/'))
+            current_year = datetime.datetime.now().year
+            day_obj = datetime.datetime(current_year, month, day)   
             movie_days.append(day_obj)
 
     movie_days = list(set(movie_days))
     movie_days.sort()
 
-    search_day_datetime = datetime.datetime.strptime(search_day, "%d/%m")
-    search_day_datetime = search_day_datetime.replace(year=datetime.datetime.now().year)
+
+    day, month = map(int, search_day.split('/'))
+    current_year = datetime.datetime.now().year
+    search_day_datetime = datetime.datetime(current_year, month, day)
     if(len(sorted_movies)==0 or all([search_day_datetime.date() > day.date() for day in movie_days])):
         result = input("No movies. Clear data?")
         os.remove(data_path)
