@@ -152,6 +152,19 @@ def fetch_movie_info(movie_dict, imdb_api, movies_list):
 
 
 def print_movies(sorted_movies, search_day):
+    columns, _ = os.get_terminal_size()
+
+    print(fg.green)
+    print("┌──────────────────┬───────────┐  ".center(columns))
+    print("│   normal cost    │ what's up │  ".center(columns))
+    print("│─────────┬────────┼───────────│  ".center(columns))
+    print("│ classic │  9,5 € │   6,65 €  │  ".center(columns))
+    print("│  dolby  │ 10,5 € │   7,35 €  │  ".center(columns))
+    print("│   vmax  │ 12,0 € │           │  ".center(columns))
+    print("│   gold  │ 24,5 € │           │  ".center(columns))
+    print("└─────────┴────────┴───────────┘  ".center(columns))
+    print(fg.clear_color)
+
     date_time = datetime.datetime.now()
     today = date_time.strftime("%d/%m")
 
