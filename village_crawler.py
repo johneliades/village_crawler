@@ -94,22 +94,14 @@ def crawl_imdb_info(title, imdb_api):
     # Search for the movie by name
     try:
         movies = imdb_api.search_movie(title)
-    except:
-        print("Exception occured")
-        return None
-    if movies:
-        try:
-            movie = imdb_api.get_movie(movies[0].getID())
-        except:
-            print("Exception occured")
-            return None
+        movie = imdb_api.get_movie(movies[0].getID())
 
         # Get the IMDb rating of the movie
         imdb_api.update(movie)
         rating = movie.get("rating")
         plot = movie.data.get("plot outline")
         length_minutes = movie.get("runtimes")[0] if movie.get("runtimes") else None
-    else:
+    except:
         return None
 
     # Rating not found in imdb or greek movie that doesn't appear in imdb results
@@ -120,6 +112,7 @@ def crawl_imdb_info(title, imdb_api):
     # Sometimes the library doesn't return the plot so I take it manually
     # from the actual imdb site using the url the library returns
     url_imdb = imdb_api.get_imdbURL(movie)
+
     if plot == None:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
@@ -344,15 +337,15 @@ def main():
     ]
 
     # Removes the movies that already exist but with some suffix like dolby atmos
-    sorted_movies = [
-        movie
-        for movie in sorted_movies
-        if all(
-            other["title"] not in movie["title"]
-            for other in sorted_movies
-            if movie["title"] != other["title"]
-        )
-    ]
+    # sorted_movies = [
+    #     movie
+    #     for movie in sorted_movies
+    #     if all(
+    #         other["title"] not in movie["title"]
+    #         for other in sorted_movies
+    #         if movie["title"] != other["title"]
+    #     )
+    # ]
 
     # Merges the movies that exist both in gr and eng
     # merged_movies = []
