@@ -204,9 +204,9 @@ def print_movies(sorted_movies, search_day):
             if "ΑΙΘ" in class_type:
                 movie_classes.append("")
             elif "VMax" in class_type:
-                movie_classes.append("vmax ")
+                movie_classes.append(fg.green + "vmax " + fg.clear_color)
             elif "GOLD" in class_type:
-                movie_classes.append("gold ")
+                movie_classes.append(fg.yellow + "gold " + fg.clear_color)
 
         if len(movie_start_times) == 0:
             continue
