@@ -160,7 +160,7 @@ def print_movies(sorted_movies, search_day):
     print("│─────────┬────────┼───────────│  ".center(columns))
     print("│ classic │  9,5 € │   6,65 €  │  ".center(columns))
     print("│  dolby  │ 10,5 € │   7,35 €  │  ".center(columns))
-    print("│   vmax  │ 12,0 € │           │  ".center(columns))
+    print("│   vmax  │ 12,0 € │   8,40 €  │  ".center(columns))
     print("│   gold  │ 24,5 € │           │  ".center(columns))
     print("└─────────┴────────┴───────────┘  ".center(columns))
     print(fg.clear_color)
