@@ -282,10 +282,36 @@ def main():
 
         os.remove(data_path)
 
+    old_movies = False
     if os.path.exists(data_path):
         with open(data_path, "rb") as pkl_handle:
             sorted_movies = pickle.load(pkl_handle)
-    else:
+
+            movie_days = []
+            for movie in sorted_movies:
+                for day in list(movie["days"].keys()):
+                    day, month = map(int, day.split("/"))
+                    current_year = datetime.datetime.now().year
+                    day_obj = datetime.datetime(current_year, month, day)
+                    movie_days.append(day_obj)
+
+            movie_days = list(set(movie_days))
+            movie_days.sort()
+
+            date_time = datetime.datetime.now()
+            today = date_time.strftime("%d/%m")
+
+            day, month = map(int, today.split("/"))
+            current_year = datetime.datetime.now().year
+            today_datetime = datetime.datetime(current_year, month, day)
+
+            if len(sorted_movies) == 0 or all(
+                [today_datetime.date() > day.date() for day in movie_days]
+            ):
+                os.remove(data_path)
+                old_movies = True
+
+    if not os.path.exists(data_path) or old_movies:
         # Create an instance of the IMDb class
         imdb_api = Cinemagoer()
 
@@ -324,26 +350,6 @@ def main():
 
     if len(sys.argv) == 2 and sys.argv[1] != "clear":
         search_day = sys.argv[1]
-
-    movie_days = []
-    for movie in sorted_movies:
-        for day in list(movie["days"].keys()):
-            day, month = map(int, day.split("/"))
-            current_year = datetime.datetime.now().year
-            day_obj = datetime.datetime(current_year, month, day)
-            movie_days.append(day_obj)
-
-    movie_days = list(set(movie_days))
-    movie_days.sort()
-
-    day, month = map(int, search_day.split("/"))
-    current_year = datetime.datetime.now().year
-    search_day_datetime = datetime.datetime(current_year, month, day)
-    if len(sorted_movies) == 0 or all(
-        [search_day_datetime.date() > day.date() for day in movie_days]
-    ):
-        result = input("No movies. Clear data?")
-        os.remove(data_path)
 
     sorted_movies = [
         movie for movie in sorted_movies if search_day in movie["days"].keys()
