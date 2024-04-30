@@ -33,15 +33,14 @@ class bg:
         return f"\u001b[48;2;{r};{g};{b}m"
 
 
-def crawl_village_titles():
-    mall_code = "21"
-    renti_code = "01"
-
+def crawl_village_titles(mall_code):
     movie_dicts = []
+
+    s = requests.Session()
 
     # Send an HTTP GET request to the URL of the web page
     url = "https://www.villagecinemas.gr/WebTicketing/?CinemaCode=" + mall_code
-    response = requests.get(url)
+    response = s.get(url)
 
     # Assuming that you have the HTML content of the web page in a variable named 'html_content'
     village_soup = BeautifulSoup(response.content, "html.parser")
@@ -62,7 +61,7 @@ def crawl_village_titles():
 
         movie_code = element.get("data-vc-movie")
 
-        movie_response = requests.get(url + "&MovieCode=" + movie_code)
+        movie_response = s.get(url + "&MovieCode=" + movie_code)
         movie_soup = BeautifulSoup(movie_response.content, "html.parser")
 
         days_hours_dict = {}
@@ -83,14 +82,22 @@ def crawl_village_titles():
                 (hour.text, available["class"][1], class_type.text)
             )
 
-        movie_dict = {"title": title, "days": days_hours_dict}
+        movie_dict = {
+            "title": title,
+            "days": days_hours_dict,
+            "request_url": url + "&MovieCode=" + movie_code,
+        }
         movie_dicts.append(movie_dict)
         print(f"{fg.green}[✓]{fg.clear_color} Crawling Village: {title}")
 
     return movie_dicts
 
 
-def crawl_imdb_info(title, imdb_api):
+results_lock = threading.Lock()
+
+
+def crawl_imdb_info(movie_dicts, index, imdb_api):
+    title = movie_dicts[index]["title"]
     # Search for the movie by name
     try:
         movies = imdb_api.search_movie(title)
@@ -102,7 +109,11 @@ def crawl_imdb_info(title, imdb_api):
         plot = movie.data.get("plot outline")
         length_minutes = movie.get("runtimes")[0] if movie.get("runtimes") else None
     except:
-        return None
+        movie_dicts[index]["imdb"] = "?"
+        movie_dicts[index]["plot"] = "?"
+        movie_dicts[index]["length"] = "?"
+        movie_dicts[index]["url"] = "?"
+        return
 
     # Rating not found in imdb or greek movie that doesn't appear in imdb results
     if rating == None or any(ord(char) in set(range(0x0370, 0x0400)) for char in title):
@@ -127,28 +138,13 @@ def crawl_imdb_info(title, imdb_api):
         if plot is None:
             plot = "?"
 
-    return rating, plot, length_minutes, url_imdb
-
-
-results_lock = threading.Lock()
-
-
-def fetch_movie_info(movie_dict, imdb_api, movies_list):
-    result = crawl_imdb_info(movie_dict["title"], imdb_api)
-    print(f"{fg.green}[✓]{fg.clear_color} Crawled IMDB: {movie_dict['title']}")
-
-    if result == None:
-        return
-
-    rating, plot, length_minutes, url_imdb = result
-
-    movie_dict["imdb"] = rating
-    movie_dict["plot"] = plot
-    movie_dict["length"] = length_minutes
-    movie_dict["url"] = url_imdb
+    print(f"{fg.green}[✓]{fg.clear_color} Crawled IMDB: {movie_dicts[index]['title']}")
 
     with results_lock:
-        movies_list.append(movie_dict)
+        movie_dicts[index]["imdb"] = rating
+        movie_dicts[index]["plot"] = plot
+        movie_dicts[index]["length"] = length_minutes
+        movie_dicts[index]["url"] = url_imdb
 
 
 def print_movies(sorted_movies, search_day):
@@ -275,6 +271,9 @@ def print_movies(sorted_movies, search_day):
 
 
 def main():
+    mall_code = "21"
+    renti_code = "01"
+
     data_path = "data.pkl"
 
     if "clear" in sys.argv and os.path.exists(data_path):
@@ -284,6 +283,9 @@ def main():
 
     old_movies = False
     if os.path.exists(data_path):
+        print()
+        print("Loading previous database, ticket availability may be outdated.")
+        print("Rerun with the 'clear' argument to refresh the data.")
         with open(data_path, "rb") as pkl_handle:
             sorted_movies = pickle.load(pkl_handle)
 
@@ -315,19 +317,13 @@ def main():
         # Create an instance of the IMDb class
         imdb_api = Cinemagoer()
 
-        # Create a list to store the extracted data
-        movies_list = []
-
-        movie_dicts = crawl_village_titles()
-
-        # Create a list to store the results
-        movies_list = []
+        movie_dicts = crawl_village_titles(mall_code)
 
         # Create and start threads
         threads = []
-        for movie_dict in movie_dicts:
+        for i in range(len(movie_dicts)):
             thread = threading.Thread(
-                target=fetch_movie_info, args=(movie_dict, imdb_api, movies_list)
+                target=crawl_imdb_info, args=(movie_dicts, i, imdb_api)
             )
             thread.start()
             threads.append(thread)
@@ -336,8 +332,10 @@ def main():
         for thread in threads:
             thread.join()
 
+        filtered_movies = [movie for movie in movie_dicts if movie["length"] != "?"]
+
         sorted_movies = sorted(
-            movies_list,
+            filtered_movies,
             key=lambda m: m["imdb"] if m["imdb"] != "?" else 0,
             reverse=True,
         )
