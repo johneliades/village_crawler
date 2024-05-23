@@ -7,6 +7,8 @@ from itertools import groupby
 from bs4 import BeautifulSoup
 from imdb import Cinemagoer
 import threading
+import re
+import json
 
 
 class fg:
@@ -33,59 +35,126 @@ class bg:
         return f"\u001b[48;2;{r};{g};{b}m"
 
 
-def crawl_village_titles(mall_code):
+def crawl_village_titles(cinema_id):
     movie_dicts = []
 
-    s = requests.Session()
+    # s = requests.Session()
 
     # Send an HTTP GET request to the URL of the web page
-    url = "https://www.villagecinemas.gr/WebTicketing/?CinemaCode=" + mall_code
-    response = s.get(url)
+    url = "https://www.villagecinemas.gr/en/tickets/film-choice"
+    content = requests.get(url).content
+
+    # File containing the response content
+    file_path = "response_content.txt"
+
+    # Read the content from the file
+    with open(file_path, "rb") as file:
+        content = file.read()
 
     # Assuming that you have the HTML content of the web page in a variable named 'html_content'
-    village_soup = BeautifulSoup(response.content, "html.parser")
+    village_soup = BeautifulSoup(content, "html.parser")
 
-    # Select all elements with a "data-vc-movie" attribute that contains data
-    elements = village_soup.select("[data-vc-movie]")
+    pattern = re.compile(r"var bookingData = (\{.*?)</script>", re.DOTALL)
+    matches = re.findall(pattern, str(village_soup))
+    matches = matches[0]
 
-    # Extract and store the second media-heading(the english movie name)
-    # and the data-vc-movie(the movie code) for each element
-    for element in elements:
-        second_media_heading = element.select_one(".media-heading:nth-of-type(2)")
-        if second_media_heading is not None:
-            title = second_media_heading.text
-        else:
-            title = element.select_one(".media-heading:nth-of-type(1)").text
+    booking_data = json.loads(matches)
+
+    for cinema in booking_data["filters"]["cinemas"]:
+        if cinema_id == cinema["value"]:
+            cinema_name = cinema["display"]
+            columns, _ = os.get_terminal_size()
+            print(cinema_name.center(columns))
+
+    print()
+
+    movies_showtimes = {}
+
+    for screen in booking_data["screens"]:
+        if cinema_id != screen["cinemaId"]:
+            continue
+
+        id = screen["id"]
+        film_id = screen["scheduledFilmId"]
+        showtime = datetime.datetime.strptime(screen["showtime"], "%Y-%m-%dT%H:%M:%S")
+        screen_name = screen["screenName"]
+
+        if film_id not in movies_showtimes:
+            movies_showtimes[film_id] = {}
+
+        # Extract days and hours
+        day = showtime.strftime("%d/%m")
+        hour = showtime.strftime("%H:%M")
+
+        if day not in movies_showtimes[film_id]:
+            movies_showtimes[film_id][day] = []
+
+        availability = "available"
+
+        # pload = {
+        #     "filmId": film_id,
+        #     "cinemaId": cinema_id,
+        #     "date": showtime.strftime("%Y-%m-%d"),
+        #     "recaptchaResponse": "",
+        # }
+        # content = s.post(
+        #     "https://www.villagecinemas.gr/tickets/seat-availability", data=pload
+        # )
+        # seat_availability = json.loads(content.text)
+        # print(seat_availability)
+        # for cur in seat_availability["data"]["availability"]:
+        #     if id == cur["screenId"]:
+        #         if cur["isLimited"] == True:
+        #             availability = "limited"
+        #             break
+        #         if cur["soldoutStatus"] == 1:
+        #             availability = "not available"
+        #             break
+
+        movies_showtimes[film_id][day].append((hour, availability, screen_name))
+
+    existing_titles = []
+    for record in booking_data["records"]:
+        if cinema_id not in record["cinemas"]:
+            continue
+
+        soup = BeautifulSoup(record["desc"], "html.parser")
+        desc = soup.get_text(strip=True)
+
+        title = record["title"]
+
+        if title in existing_titles:
+            continue
+
+        existing_titles.append(title)
 
         print(f"{fg.yellow}[~]{fg.clear_color} Crawling Village: {title}", end="\r")
 
-        movie_code = element.get("data-vc-movie")
+        days_to_hour_availability_screenName = {}
 
-        movie_response = s.get(url + "&MovieCode=" + movie_code)
-        movie_soup = BeautifulSoup(movie_response.content, "html.parser")
+        for day in record["dates"]:
+            day_obj = datetime.datetime.strptime(day, "%Y-%m-%d")
+            day = day_obj.strftime("%d/%m")
 
-        days_hours_dict = {}
-        hours = movie_soup.select(".str-time")
-        class_types = movie_soup.select(".type-item")
-        availability = movie_soup.select(".availability")
+            if day not in days_to_hour_availability_screenName:
+                days_to_hour_availability_screenName[day] = []
 
-        lists = [hours, availability, class_types]
-        for hour, available, class_type in zip(*lists):
-            key = hour.parent.parent.parent.get("id").replace("timeof", "")
-
-            date_obj = datetime.datetime.strptime(key, "%Y%m%d")
-            day = date_obj.strftime("%d/%m")
-
-            if day not in days_hours_dict:
-                days_hours_dict[day] = []
-            days_hours_dict[day].append(
-                (hour.text, available["class"][1], class_type.text)
-            )
+            try:
+                for hour_availability_screenName in movies_showtimes[record["id"]][day]:
+                    days_to_hour_availability_screenName[day].append(
+                        hour_availability_screenName
+                    )
+            except:
+                pass
 
         movie_dict = {
+            "id": record["id"],
             "title": title,
-            "days": days_hours_dict,
-            "request_url": url + "&MovieCode=" + movie_code,
+            "days": days_to_hour_availability_screenName,
+            "plot": desc,
+            "length": record["dur"],
+            "village_url": record["url"],
+            "trailer_url": "https://www.youtube.com/watch?v=" + record["vid"],
         }
         movie_dicts.append(movie_dict)
         print(f"{fg.green}[✓]{fg.clear_color} Crawling Village: {title}")
@@ -106,49 +175,30 @@ def crawl_imdb_info(movie_dicts, index, imdb_api):
         # Get the IMDb rating of the movie
         imdb_api.update(movie)
         rating = movie.get("rating")
-        plot = movie.data.get("plot outline")
-        length_minutes = movie.get("runtimes")[0] if movie.get("runtimes") else None
     except:
-        movie_dicts[index]["imdb"] = "?"
-        movie_dicts[index]["plot"] = "?"
-        movie_dicts[index]["length"] = "?"
-        movie_dicts[index]["url"] = "?"
+        movie_dicts[index]["imdb_rating"] = "?"
+        movie_dicts[index]["imdb_url"] = "?"
         return
 
     # Rating not found in imdb or greek movie that doesn't appear in imdb results
     if rating == None or any(ord(char) in set(range(0x0370, 0x0400)) for char in title):
         rating = "?"
-        plot = "?"
 
     # Sometimes the library doesn't return the plot so I take it manually
     # from the actual imdb site using the url the library returns
     url_imdb = imdb_api.get_imdbURL(movie)
 
-    if plot == None:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
-            AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
-        }
-
-        response_imdb = requests.get(url_imdb, headers=headers)
-        soup_imdb = BeautifulSoup(response_imdb.text, "html.parser")
-        plot_elem = soup_imdb.find("p", {"data-testid": "plot"})
-        first_span = plot_elem.find("span", recursive=False)
-        plot = first_span.text.strip()
-        if plot is None:
-            plot = "?"
-
     print(f"{fg.green}[✓]{fg.clear_color} Crawled IMDB: {movie_dicts[index]['title']}")
 
     with results_lock:
-        movie_dicts[index]["imdb"] = rating
-        movie_dicts[index]["plot"] = plot
-        movie_dicts[index]["length"] = length_minutes
-        movie_dicts[index]["url"] = url_imdb
+        movie_dicts[index]["imdb_rating"] = rating
+        movie_dicts[index]["imdb_url"] = url_imdb
 
 
 def print_movies(sorted_movies, search_day):
     columns, _ = os.get_terminal_size()
+
+    print()
 
     print(fg.green)
     print("┌──────────────────┬───────────┐  ".center(columns))
@@ -170,7 +220,7 @@ def print_movies(sorted_movies, search_day):
         movie_availabilities = []
         movie_classes = []
         if movie["length"] != None:
-            delta = datetime.timedelta(minutes=int(movie["length"]) + 14)
+            delta = datetime.timedelta(minutes=int(movie["length"]))
         else:
             delta = None
 
@@ -209,22 +259,28 @@ def print_movies(sorted_movies, search_day):
 
         columns, _ = os.get_terminal_size()
 
-        if movie["imdb"] == "?":
+        if movie["imdb_rating"] == "?":
             color = fg.red
-        elif float(movie["imdb"]) >= 7:
+        elif float(movie["imdb_rating"]) >= 7:
             color = fg.green
-        elif float(movie["imdb"]) >= 6 and movie["imdb"] < 7:
+        elif float(movie["imdb_rating"]) >= 6 and movie["imdb_rating"] < 7:
             color = fg.yellow
         else:
             color = fg.red
 
-        half_width = columns - len(movie["title"]) - 5 - len(str(movie["imdb"]))
+        half_width = columns - len(movie["title"]) - 5 - len(str(movie["imdb_rating"]))
 
         print(fg.cyan, end="")
         for i in range(half_width // 2):
             print("\u2501", end="")
         print(
-            " " + movie["title"] + " (" + color + str(movie["imdb"]) + fg.cyan + ") ",
+            " "
+            + movie["title"]
+            + " ("
+            + color
+            + str(movie["imdb_rating"])
+            + fg.cyan
+            + ") ",
             end="",
         )
         for i in range(half_width // 2):
@@ -253,7 +309,9 @@ def print_movies(sorted_movies, search_day):
                     f"{fg.blue}{start}{fg.clear_color}"
                 )
 
-        print(fg.grey + movie["url"].center(columns) + fg.clear_color + "\n")
+        print(fg.grey + movie["village_url"].center(columns) + fg.clear_color)
+        print(fg.grey + movie["imdb_url"].center(columns) + fg.clear_color)
+        print(fg.grey + movie["trailer_url"].center(columns) + fg.clear_color + "\n")
 
         result = " "
         result += ", ".join(formatted_times)
@@ -336,7 +394,7 @@ def main():
 
         sorted_movies = sorted(
             filtered_movies,
-            key=lambda m: m["imdb"] if m["imdb"] != "?" else 0,
+            key=lambda m: m["imdb_rating"] if m["imdb_rating"] != "?" else 0,
             reverse=True,
         )
 
@@ -352,31 +410,6 @@ def main():
     sorted_movies = [
         movie for movie in sorted_movies if search_day in movie["days"].keys()
     ]
-
-    # Removes the movies that already exist but with some suffix like dolby atmos
-    # sorted_movies = [
-    #     movie
-    #     for movie in sorted_movies
-    #     if all(
-    #         other["title"] not in movie["title"]
-    #         for other in sorted_movies
-    #         if movie["title"] != other["title"]
-    #     )
-    # ]
-
-    # Merges the movies that exist both in gr and eng
-    # merged_movies = []
-    # for key, group in groupby(sorted_movies, key=lambda movie: movie['title'].replace("(ENG)", "").replace("(GR)", "").strip()):
-    #     group = list(group)
-    #     if len(group) == 2:
-    #         group = group[0]
-    #         merged_title = f"{key} (ENG-GR)"
-    #         merged_movies.append({"title": merged_title, 'days': group['days'],
-    #             'imdb': group['imdb'], 'plot': group['plot'], "length": group['length'], "url": group['url']})
-    #     else:
-    #         merged_movies.extend(group)
-
-    # sorted_movies = merged_movies
 
     print_movies(sorted_movies, search_day)
 
