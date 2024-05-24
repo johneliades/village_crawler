@@ -12,8 +12,9 @@ import json
 
 
 class fg:
-    blue = "\033[1;34m"
-    light_red = "\033[1;31m"
+    blue = "\033[34m"
+    cyan_bold = "\033[1;34m"
+    red_bold = "\033[1;31m"
     cyan = "\033[96m"
     red = "\033[31m"
     green = "\033[32m"
@@ -136,22 +137,18 @@ def crawl_village_titles(cinema_id):
             day_obj = datetime.datetime.strptime(day, "%Y-%m-%d")
             day = day_obj.strftime("%d/%m")
 
-            if day not in days_to_hour_availability_screenName:
-                days_to_hour_availability_screenName[day] = []
-
             try:
-                for hour_availability_screenName in movies_showtimes[record["id"]][day]:
-                    days_to_hour_availability_screenName[day].append(
-                        hour_availability_screenName
-                    )
+                days_to_hour_availability_screenName[day] = movies_showtimes[
+                    record["movieId"]
+                ][day]
             except:
                 pass
 
         movie_dict = {
-            "id": record["id"],
+            "id": record["movieId"],
             "title": title,
             "days": days_to_hour_availability_screenName,
-            "plot": desc,
+            "village_plot": desc,
             "length": record["dur"],
             "village_url": record["url"],
             "trailer_url": "https://www.youtube.com/watch?v=" + record["vid"],
@@ -175,6 +172,7 @@ def crawl_imdb_info(movie_dicts, index, imdb_api):
         # Get the IMDb rating of the movie
         imdb_api.update(movie)
         rating = movie.get("rating")
+        movie_dicts[index]["imdb_plot"] = movie.data.get("plot outline")
     except:
         movie_dicts[index]["imdb_rating"] = "?"
         movie_dicts[index]["imdb_url"] = "?"
@@ -235,6 +233,8 @@ def print_movies(sorted_movies, search_day):
                 movie_start_times.append(time)
                 if delta != None:
                     movie_end_times.append(end_time.strftime("%H:%M"))
+            elif search_day == today and formated_time.time() < date_time.now().time():
+                continue
             elif search_day != today:
                 movie_start_times.append(time)
                 if delta != None:
@@ -298,20 +298,28 @@ def print_movies(sorted_movies, search_day):
             for start, end, availability, movie_class in zip(*lists):
                 formatted_times.append(
                     f"{availability} {fg.clear_color} {movie_class}"
-                    f"{fg.blue}{start}{fg.clear_color}-"
-                    f"{fg.light_red}{end}{fg.clear_color}"
+                    f"{fg.cyan_bold}{start}{fg.clear_color}-"
+                    f"{fg.red_bold}{end}{fg.clear_color}"
                 )
         else:
             lists = [movie_start_times, movie_availabilities, movie_classes]
             for start, availability, movie_class in zip(*lists):
                 formatted_times.append(
                     f"{availability} {fg.clear_color} {movie_class}"
-                    f"{fg.blue}{start}{fg.clear_color}"
+                    f"{fg.cyan_bold}{start}{fg.clear_color}"
                 )
 
-        print(fg.grey + movie["village_url"].center(columns) + fg.clear_color)
-        print(fg.grey + movie["imdb_url"].center(columns) + fg.clear_color)
-        print(fg.grey + movie["trailer_url"].center(columns) + fg.clear_color + "\n")
+        # print(fg.grey + movie["imdb_url"].center(columns) + fg.clear_color)
+        print(
+            (
+                fg.grey
+                + movie["village_url"]
+                + ", "
+                + movie["trailer_url"]
+                + fg.clear_color
+                + "\n"
+            ).center(columns + len(fg.grey) + len(fg.clear_color) + 3),
+        )
 
         result = " "
         result += ", ".join(formatted_times)
@@ -322,8 +330,7 @@ def print_movies(sorted_movies, search_day):
 
         formatted_availabilities = []
 
-        if movie["plot"] != "?":
-            print(movie["plot"].center(columns))
+        print(movie["village_plot"].center(columns))
 
         print()
 
