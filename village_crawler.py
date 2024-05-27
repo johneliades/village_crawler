@@ -241,20 +241,24 @@ def crawl_imdb_info(movie_dicts, index, imdb_api):
         movie_dicts[index]["imdb_url"] = url_imdb
 
 
-def print_movies(sorted_movies, search_day):
+def print_movies(sorted_movies, search_day, cinema_name):
     columns, _ = os.get_terminal_size()
 
     print()
 
     print(fg.green)
-    print("┌──────────────────┬───────────┐  ".center(columns))
-    print("│   normal cost    │ what's up │  ".center(columns))
-    print("│─────────┬────────┼───────────│  ".center(columns))
-    print("│ classic │  9,5 € │   6,65 €  │  ".center(columns))
-    print("│  dolby  │ 10,5 € │   7,35 €  │  ".center(columns))
-    print("│   vmax  │ 12,0 € │   8,40 €  │  ".center(columns))
-    print("│   gold  │ 24,5 € │           │  ".center(columns))
-    print("└─────────┴────────┴───────────┘  ".center(columns))
+    print("┌──────────────────┬───────────┐".center(columns))
+    print("│   normal cost    │ what's up │".center(columns))
+    print("│─────────┬────────┼───────────│".center(columns))
+    print("│ classic │  9,5 € │   6,65 €  │".center(columns))
+    print("│  dolby  │ 10,5 € │   7,35 €  │".center(columns))
+    print("│   vmax  │ 12,0 € │   8,40 €  │".center(columns))
+    print("│   gold  │ 24,5 € │           │".center(columns))
+    print("└─────────┴────────┴───────────┘".center(columns))
+    print(fg.clear_color)
+
+    print(fg.red_bold, end="")
+    print(cinema_name.center(columns))
     print(fg.clear_color)
 
     date_time = datetime.datetime.now()
@@ -400,19 +404,19 @@ def print_movies(sorted_movies, search_day):
 def main():
     cinemas = {}
 
-    cinemas["Maroussi"] = "21"  # The Mall Athens
-    cinemas["Rentis"] = "01"  # Village Shopping and more...
-    cinemas["Thessaloniki"] = "22"  # Mediterranean Cosmos
-    cinemas["Agios Dimitrios"] = "26"  # Athens Metro Mall
-    cinemas["Pagrati"] = "03"  #
-    cinemas["Larissa"] = "30"  # Fashion City Outlet
+    cinemas["Maroussi - The Mall Athens"] = "21"
+    cinemas["Rentis - Village Shopping and more..."] = "01"
+    cinemas["Thessaloniki - Mediterranean Cosmos"] = "22"
+    cinemas["Agios Dimitrios - Athens Metro Mall"] = "26"
+    cinemas["Pagrati - Pagrati Village"] = "03"
+    cinemas["Volos - Volos Village"] = "23"
+    cinemas["Larissa - Fashion City Outlet"] = "30"
 
-    cinema_id = cinemas["Maroussi"]
+    cinema_id = cinemas["Maroussi - The Mall Athens"]
 
-    key = next((k for k, v in cinemas.items() if v == cinema_id), None)
-    key = key.lower()
+    cinema_name = next((k for k, v in cinemas.items() if v == cinema_id), None)
 
-    data_path = f"data_{key}.pkl"
+    data_path = f"data_{cinema_name.lower()}.pkl"
     nltk.download("stopwords", quiet=True)
 
     if "clear" in sys.argv and os.path.exists(data_path):
@@ -492,7 +496,7 @@ def main():
         movie for movie in sorted_movies if search_day in movie["days"].keys()
     ]
 
-    print_movies(sorted_movies, search_day)
+    print_movies(sorted_movies, search_day, cinema_name)
 
 
 if __name__ == "__main__":
