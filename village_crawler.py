@@ -151,7 +151,11 @@ def crawl_village_titles(cinema_id):
             "village_plot": desc,
             "length": record["dur"],
             "village_url": record["url"],
-            "trailer_url": "https://www.youtube.com/watch?v=" + record["vid"],
+            "trailer_url": (
+                "https://www.youtube.com/watch?v=" + record["vid"]
+                if record["vid"]
+                else ""
+            ),
         }
         movie_dicts.append(movie_dict)
         print(f"{fg.green}[✓]{fg.clear_color} Crawling Village: {title}")
@@ -169,10 +173,26 @@ def crawl_imdb_info(movie_dicts, index, imdb_api):
         movies = imdb_api.search_movie(title)
         movie = imdb_api.get_movie(movies[0].getID())
 
+        url_imdb = imdb_api.get_imdbURL(movie)
+
         # Get the IMDb rating of the movie
         imdb_api.update(movie)
         rating = movie.get("rating")
-        movie_dicts[index]["imdb_plot"] = movie.data.get("plot outline")
+
+        plot = movie.data.get("plot outline")
+        if not plot:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+                AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+            }
+
+            response_imdb = requests.get(url_imdb, headers=headers)
+            soup_imdb = BeautifulSoup(response_imdb.text, "html.parser")
+            plot_elem = soup_imdb.find("p", {"data-testid": "plot"})
+            first_span = plot_elem.find("span", recursive=False)
+            plot = first_span.text.strip()
+
+        movie_dicts[index]["imdb_plot"] = plot
     except:
         movie_dicts[index]["imdb_rating"] = "?"
         movie_dicts[index]["imdb_url"] = "?"
@@ -181,10 +201,6 @@ def crawl_imdb_info(movie_dicts, index, imdb_api):
     # Rating not found in imdb or greek movie that doesn't appear in imdb results
     if rating == None or any(ord(char) in set(range(0x0370, 0x0400)) for char in title):
         rating = "?"
-
-    # Sometimes the library doesn't return the plot so I take it manually
-    # from the actual imdb site using the url the library returns
-    url_imdb = imdb_api.get_imdbURL(movie)
 
     print(f"{fg.green}[✓]{fg.clear_color} Crawled IMDB: {movie_dicts[index]['title']}")
 
@@ -212,6 +228,8 @@ def print_movies(sorted_movies, search_day):
     date_time = datetime.datetime.now()
     today = date_time.strftime("%d/%m")
 
+    no_longer_playing_today = 0
+
     for movie in sorted_movies:
         movie_start_times = []
         movie_end_times = []
@@ -222,7 +240,7 @@ def print_movies(sorted_movies, search_day):
         else:
             delta = None
 
-        for time_tuple in movie["days"][search_day]:
+        for index, time_tuple in enumerate(movie["days"][search_day]):
             time, availability, class_type = time_tuple
 
             formated_time = datetime.datetime.strptime(time, "%H:%M")
@@ -234,6 +252,8 @@ def print_movies(sorted_movies, search_day):
                 if delta != None:
                     movie_end_times.append(end_time.strftime("%H:%M"))
             elif search_day == today and formated_time.time() < date_time.now().time():
+                if index == len(movie["days"][search_day]) - 1:
+                    no_longer_playing_today += 1
                 continue
             elif search_day != today:
                 movie_start_times.append(time)
@@ -314,8 +334,7 @@ def print_movies(sorted_movies, search_day):
             (
                 fg.grey
                 + movie["village_url"]
-                + ", "
-                + movie["trailer_url"]
+                + (", " + movie["trailer_url"] if movie["trailer_url"] else "")
                 + fg.clear_color
                 + "\n"
             ).center(columns + len(fg.grey) + len(fg.clear_color) + 3),
@@ -333,6 +352,9 @@ def print_movies(sorted_movies, search_day):
         print(movie["village_plot"].center(columns))
 
         print()
+
+    if no_longer_playing_today == len(sorted_movies):
+        print("No more movies today".center(columns))
 
 
 def main():
