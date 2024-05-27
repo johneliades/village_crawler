@@ -9,6 +9,38 @@ from imdb import Cinemagoer
 import threading
 import re
 import json
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from nltk.corpus import stopwords
+import nltk
+
+
+# Preprocess the text
+def preprocess(text):
+    # Convert to lowercase
+    text = text.lower()
+    # Remove punctuation
+    text = re.sub(r"[^\w\s]", "", text)
+    # Tokenize and remove stopwords
+    stop_words = set(stopwords.words("english"))
+    tokens = text.split()
+    filtered_tokens = [word for word in tokens if word not in stop_words]
+    return " ".join(filtered_tokens)
+
+
+# Function to calculate similarity
+def calculate_similarity(text1, text2):
+    # Preprocess the texts
+    text1 = preprocess(text1)
+    text2 = preprocess(text2)
+
+    # Vectorize the texts using TF-IDF
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([text1, text2])
+
+    # Compute cosine similarity
+    similarity_matrix = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix)
+    return similarity_matrix[0][1]
 
 
 class fg:
@@ -350,18 +382,38 @@ def print_movies(sorted_movies, search_day):
         formatted_availabilities = []
 
         print(movie["village_plot"].center(columns))
-
         print()
+
+        # similarity_score = calculate_similarity(
+        #     movie["village_plot"], movie["imdb_plot"]
+        # )
+
+        # if similarity_score < 0.05:
+        #     print(
+        #         f"The plots describe different movies. {movie['imdb_url']} {similarity_score}"
+        #     )
 
     if no_longer_playing_today == len(sorted_movies):
         print("No more movies today".center(columns))
 
 
 def main():
-    mall_code = "21"
-    renti_code = "01"
+    cinemas = {}
 
-    data_path = "data.pkl"
+    cinemas["Maroussi"] = "21"  # The Mall Athens
+    cinemas["Rentis"] = "01"  # Village Shopping and more...
+    cinemas["Thessaloniki"] = "22"  # Mediterranean Cosmos
+    cinemas["Agios Dimitrios"] = "26"  # Athens Metro Mall
+    cinemas["Pagrati"] = "03"  #
+    cinemas["Larissa"] = "30"  # Fashion City Outlet
+
+    cinema_id = cinemas["Maroussi"]
+
+    key = next((k for k, v in cinemas.items() if v == cinema_id), None)
+    key = key.lower()
+
+    data_path = f"data_{key}.pkl"
+    nltk.download("stopwords", quiet=True)
 
     if "clear" in sys.argv and os.path.exists(data_path):
         result = input("Are you sure you want to remove data?")
@@ -404,7 +456,7 @@ def main():
         # Create an instance of the IMDb class
         imdb_api = Cinemagoer()
 
-        movie_dicts = crawl_village_titles(mall_code)
+        movie_dicts = crawl_village_titles(cinema_id)
 
         # Create and start threads
         threads = []
