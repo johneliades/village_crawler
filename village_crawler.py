@@ -78,11 +78,11 @@ def crawl_village_titles(cinema_id):
     content = requests.get(url).content
 
     # File containing the response content
-    file_path = "response_content.txt"
+    # file_path = "response_content.txt"
 
-    # Read the content from the file
-    with open(file_path, "rb") as file:
-        content = file.read()
+    # # Read the content from the file
+    # with open(file_path, "rb") as file:
+    #     content = file.read()
 
     # Assuming that you have the HTML content of the web page in a variable named 'html_content'
     village_soup = BeautifulSoup(content, "html.parser")
