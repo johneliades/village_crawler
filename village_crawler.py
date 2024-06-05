@@ -49,8 +49,8 @@ class fg:
     red_bold = "\033[1;31m"
     cyan = "\033[96m"
     red = "\033[31m"
-    green = "\033[32m"
-    yellow = "\033[33m"
+    green = "\033[1;32m"
+    yellow = "\033[1;33m"
     grey = "\033[1;30m"
     clear_color = "\033[0m"
     bold = "\033[1m"
@@ -111,6 +111,11 @@ def crawl_village_titles(cinema_id):
         film_id = screen["scheduledFilmId"]
         showtime = datetime.datetime.strptime(screen["showtime"], "%Y-%m-%dT%H:%M:%S")
         screen_name = screen["screenName"]
+        soldout_status = screen["soldoutStatus"]
+        is_sphera = screen["isSphera"]
+        is_dolby = screen["isDolby"]
+        is_3D = screen["is3D"]
+        is_limited = screen["isLimited"]
 
         if film_id not in movies_showtimes:
             movies_showtimes[film_id] = {}
@@ -122,8 +127,7 @@ def crawl_village_titles(cinema_id):
         if day not in movies_showtimes[film_id]:
             movies_showtimes[film_id][day] = []
 
-        availability = "available"
-
+        # availability = "available"
         # pload = {
         #     "filmId": film_id,
         #     "cinemaId": cinema_id,
@@ -144,7 +148,19 @@ def crawl_village_titles(cinema_id):
         #             availability = "not available"
         #             break
 
-        movies_showtimes[film_id][day].append((hour, availability, screen_name))
+        movies_showtimes[film_id][day].append(
+            (
+                hour,
+                screen_name,
+                soldout_status,
+                is_sphera,
+                is_dolby,
+                is_3D,
+                is_limited,
+            )
+        )
+
+        movies_showtimes[film_id][day].sort(key=lambda x: x[0])
 
     existing_titles = []
     for record in booking_data["records"]:
@@ -173,7 +189,8 @@ def crawl_village_titles(cinema_id):
                 days_to_hour_availability_screenName[day] = movies_showtimes[
                     record["movieId"]
                 ][day]
-            except:
+
+            except Exception as e:
                 pass
 
         movie_dict = {
@@ -277,7 +294,15 @@ def print_movies(sorted_movies, search_day, cinema_name):
             delta = None
 
         for index, time_tuple in enumerate(movie["days"][search_day]):
-            time, availability, class_type = time_tuple
+            (
+                time,
+                screen_name,
+                soldout_status,
+                is_sphera,
+                is_dolby,
+                is_3D,
+                is_limited,
+            ) = time_tuple
 
             formated_time = datetime.datetime.strptime(time, "%H:%M")
             if delta != None:
@@ -296,19 +321,27 @@ def print_movies(sorted_movies, search_day, cinema_name):
                 if delta != None:
                     movie_end_times.append(end_time.strftime("%H:%M"))
 
-            if availability == "available":
-                movie_availabilities.append(bg.green)
-            elif availability == "limited":
+            if is_limited:
                 movie_availabilities.append(bg.yellow)
-            elif availability == "not available":
+            elif soldout_status:
                 movie_availabilities.append(bg.red)
+            else:
+                movie_availabilities.append(bg.green)
 
-            if "ΑΙΘ" in class_type:
-                movie_classes.append("")
-            elif "VMax" in class_type:
-                movie_classes.append(fg.green + "vmax " + fg.clear_color)
-            elif "GOLD" in class_type:
-                movie_classes.append(fg.yellow + "gold " + fg.clear_color)
+            items = ""
+            if is_dolby:
+                items += fg.blue + "dolby " + fg.clear_color
+            if is_sphera:
+                items += fg.green + "sphera " + fg.clear_color
+            if is_3D:
+                items += fg.red + "3D " + fg.clear_color
+
+            if "ΑΙΘ" in screen_name:
+                movie_classes.append(items)
+            elif "VMax" in screen_name:
+                movie_classes.append(fg.yellow + "vmax " + fg.clear_color + items)
+            elif "GOLD" in screen_name:
+                movie_classes.append(fg.yellow + "gold " + fg.clear_color + items)
 
         if len(movie_start_times) == 0:
             continue
