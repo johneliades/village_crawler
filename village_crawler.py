@@ -13,6 +13,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.corpus import stopwords
 import nltk
+import urllib.parse
 
 
 # Preprocess the text
@@ -402,8 +403,8 @@ def print_movies(sorted_movies, search_day, cinema_name):
         print(
             (
                 fg.grey
-                + movie["village_url"]
-                + (", " + movie["trailer_url"] if movie["trailer_url"] else "")
+                + urllib.parse.quote(movie["village_url"], safe=":/")
+                + (" " + movie["trailer_url"] if movie["trailer_url"] else "")
                 + fg.clear_color
                 + "\n"
             ).center(columns + len(fg.grey) + len(fg.clear_color) + 3),
