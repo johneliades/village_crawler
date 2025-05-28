@@ -135,8 +135,9 @@ def crawl_village_titles(cinema_id):
         #     "date": showtime.strftime("%Y-%m-%d"),
         #     "recaptchaResponse": "",
         # }
-        # content = s.post(
-        #     "https://www.villagecinemas.gr/tickets/seat-availability", data=pload
+        # print(payload)
+        # content = requests.post(
+        #     "https://www.villagecinemas.gr/tickets/seat-availability", data=payload
         # )
         # seat_availability = json.loads(content.text)
         # print(seat_availability)
@@ -148,6 +149,7 @@ def crawl_village_titles(cinema_id):
         #         if cur["soldoutStatus"] == 1:
         #             availability = "not available"
         #             break
+        # print(availability)
 
         movies_showtimes[film_id][day].append(
             (
@@ -331,18 +333,18 @@ def print_movies(sorted_movies, search_day, cinema_name):
 
             items = ""
             if is_dolby:
-                items += fg.blue + "dolby " + fg.clear_color
+                items += fg.grey + "(dolby) " + fg.clear_color
             if is_sphera:
-                items += fg.green + "sphera " + fg.clear_color
+                items += fg.green + "(sphera) " + fg.clear_color
             if is_3D:
-                items += fg.red + "3D " + fg.clear_color
+                items += fg.red + "(3D) " + fg.clear_color
 
             if "ΑΙΘ" in screen_name:
                 movie_classes.append(items)
             elif "VMax" in screen_name:
-                movie_classes.append(fg.yellow + "vmax " + fg.clear_color + items)
+                movie_classes.append(fg.yellow + "(vmax) " + fg.clear_color + items)
             elif "GOLD" in screen_name:
-                movie_classes.append(fg.yellow + "gold " + fg.clear_color + items)
+                movie_classes.append(fg.yellow + "(gold) " + fg.clear_color + items)
 
         if len(movie_start_times) == 0:
             continue
@@ -386,16 +388,25 @@ def print_movies(sorted_movies, search_day, cinema_name):
                 movie_classes,
             ]
             for start, end, availability, movie_class in zip(*lists):
+                # formatted_times.append(
+                #     f"{availability} {fg.clear_color} {movie_class}"
+                #     f"{fg.cyan_bold}{start}{fg.clear_color}-"
+                #     f"{fg.red_bold}{end}{fg.clear_color}"
+                # )
                 formatted_times.append(
-                    f"{availability} {fg.clear_color} {movie_class}"
+                    f"{availability}{fg.clear_color}{movie_class}"
                     f"{fg.cyan_bold}{start}{fg.clear_color}-"
                     f"{fg.red_bold}{end}{fg.clear_color}"
                 )
         else:
             lists = [movie_start_times, movie_availabilities, movie_classes]
             for start, availability, movie_class in zip(*lists):
+                # formatted_times.append(
+                #     f"{availability} {fg.clear_color} {movie_class}"
+                #     f"{fg.cyan_bold}{start}{fg.clear_color}"
+                # )
                 formatted_times.append(
-                    f"{availability} {fg.clear_color} {movie_class}"
+                    f"{availability}{fg.clear_color}{movie_class}"
                     f"{fg.cyan_bold}{start}{fg.clear_color}"
                 )
 
