@@ -229,7 +229,15 @@ def crawl_imdb_info(movie_dicts, index):
             raise ValueError("No results found")
 
         first = results.titles[0]
-        imdb_id = first.imdb_id  # e.g. "tt0133093"
+
+        match = next(
+            (
+                t for t in results.titles[:5]
+                if getattr(t, "year", None) in (2025, 2026)
+            ),
+            first
+        )
+        imdb_id = match.imdb_id
 
         movie = imdb_get_movie(imdb_id)
 
@@ -260,7 +268,7 @@ def crawl_imdb_info(movie_dicts, index):
         return
 
     # No rating or Greek title
-    if rating is None or any(ord(c) in range(0x0370, 0x0400) for c in title):
+    if rating is None:
         rating = "?"
 
     print(f"{fg.green}[✓]{fg.clear_color} Crawled IMDB: {movie_dicts[index]['title']}")
@@ -347,18 +355,18 @@ def print_movies(sorted_movies, search_day, cinema_name):
             if is_sphera:
                 items += fg.green + "(sphera) " + fg.clear_color        
             if isImax:
-                items += fg.green + "(Imax) " + fg.clear_color
+                items += fg.green + "(IMax) " + fg.clear_color
             if is_3D:
                 items += fg.red + "(3D) " + fg.clear_color
             if isImax3D:
-                items += fg.red + "(Imax3D) " + fg.clear_color
+                items += fg.red + "(IMax3D) " + fg.clear_color
 
-            if "ΑΙΘ" in screen_name:
-                movie_classes.append(items)
-            elif "VMax" in screen_name:
-                movie_classes.append(fg.yellow + "(vmax) " + fg.clear_color + items)
+            if "VMax" in screen_name:
+                movie_classes.append(fg.yellow + "(VMax) " + fg.clear_color + items)
             elif "GOLD" in screen_name:
-                movie_classes.append(fg.yellow + "(gold) " + fg.clear_color + items)
+                movie_classes.append(fg.yellow + "(Gold) " + fg.clear_color + items)
+            else:
+                movie_classes.append(items)
 
         if len(movie_start_times) == 0:
             continue
