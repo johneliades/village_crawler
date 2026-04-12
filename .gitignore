@@ -2,3 +2,4 @@
 pyvenv.cfg
 *.pkl
 response_content.txt
+.cache/imdbinfo/waf_cookies.json

@@ -5,7 +5,7 @@ import sys
 import requests
 from itertools import groupby
 from bs4 import BeautifulSoup
-from imdb import Cinemagoer
+from imdbinfo import search_title, get_movie as imdb_get_movie
 import threading
 import re
 import json
@@ -217,41 +217,46 @@ def crawl_village_titles(cinema_id):
 
 results_lock = threading.Lock()
 
-
-def crawl_imdb_info(movie_dicts, index, imdb_api):
+def crawl_imdb_info(movie_dicts, index):
     title = movie_dicts[index]["title"]
-    # Search for the movie by name
     try:
-        movies = imdb_api.search_movie(title)
-        movie = imdb_api.get_movie(movies[0].getID())
+        results = search_title(title)
+        if not results or not results.titles:
+            raise ValueError("No results found")
 
-        url_imdb = imdb_api.get_imdbURL(movie)
+        first = results.titles[0]
+        imdb_id = first.imdb_id  # e.g. "tt0133093"
 
-        # Get the IMDb rating of the movie
-        imdb_api.update(movie)
-        rating = movie.get("rating")
+        movie = imdb_get_movie(imdb_id)
 
-        plot = movie.data.get("plot outline")
+        url_imdb = f"https://www.imdb.com/title/{imdb_id}/"
+        rating = movie.rating  # float or None
+
+        # Try plot from imdbinfo directly
+        plot = getattr(movie, "plot", None) or getattr(movie, "plot_outline", None)
+
+        # Fallback: scrape IMDb page
         if not plot:
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
-                AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
             }
-
             response_imdb = requests.get(url_imdb, headers=headers)
             soup_imdb = BeautifulSoup(response_imdb.text, "html.parser")
             plot_elem = soup_imdb.find("p", {"data-testid": "plot"})
-            first_span = plot_elem.find("span", recursive=False)
-            plot = first_span.text.strip()
+            if plot_elem:
+                first_span = plot_elem.find("span", recursive=False)
+                plot = first_span.text.strip() if first_span else ""
 
-        movie_dicts[index]["imdb_plot"] = plot
-    except:
+        movie_dicts[index]["imdb_plot"] = plot or ""
+
+    except Exception:
         movie_dicts[index]["imdb_rating"] = "?"
         movie_dicts[index]["imdb_url"] = "?"
         return
 
-    # Rating not found in imdb or greek movie that doesn't appear in imdb results
-    if rating == None or any(ord(char) in set(range(0x0370, 0x0400)) for char in title):
+    # No rating or Greek title
+    if rating is None or any(ord(c) in range(0x0370, 0x0400) for c in title):
         rating = "?"
 
     print(f"{fg.green}[✓]{fg.clear_color} Crawled IMDB: {movie_dicts[index]['title']}")
@@ -259,7 +264,6 @@ def crawl_imdb_info(movie_dicts, index, imdb_api):
     with results_lock:
         movie_dicts[index]["imdb_rating"] = rating
         movie_dicts[index]["imdb_url"] = url_imdb
-
 
 def print_movies(sorted_movies, search_day, cinema_name):
     columns, _ = os.get_terminal_size()
@@ -502,16 +506,13 @@ def main():
                 old_movies = True
 
     if not os.path.exists(data_path) or old_movies:
-        # Create an instance of the IMDb class
-        imdb_api = Cinemagoer()
-
         movie_dicts = crawl_village_titles(cinema_id)
 
         # Create and start threads
         threads = []
         for i in range(len(movie_dicts)):
             thread = threading.Thread(
-                target=crawl_imdb_info, args=(movie_dicts, i, imdb_api)
+                target=crawl_imdb_info, args=(movie_dicts, i)
             )
             thread.start()
             threads.append(thread)
