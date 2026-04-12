@@ -116,6 +116,8 @@ def crawl_village_titles(cinema_id):
         is_sphera = screen["isSphera"]
         is_dolby = screen["isDolby"]
         is_3D = screen["is3D"]
+        isImax = screen["isImax"]
+        isImax3D = screen["isImax3D"]
         is_limited = screen["isLimited"]
 
         if film_id not in movies_showtimes:
@@ -159,6 +161,8 @@ def crawl_village_titles(cinema_id):
                 is_sphera,
                 is_dolby,
                 is_3D,
+                isImax,
+                isImax3D,
                 is_limited,
             )
         )
@@ -308,6 +312,8 @@ def print_movies(sorted_movies, search_day, cinema_name):
                 is_sphera,
                 is_dolby,
                 is_3D,
+                isImax,
+                isImax3D,
                 is_limited,
             ) = time_tuple
 
@@ -339,9 +345,13 @@ def print_movies(sorted_movies, search_day, cinema_name):
             if is_dolby:
                 items += fg.grey + "(dolby) " + fg.clear_color
             if is_sphera:
-                items += fg.green + "(sphera) " + fg.clear_color
+                items += fg.green + "(sphera) " + fg.clear_color        
+            if isImax:
+                items += fg.green + "(Imax) " + fg.clear_color
             if is_3D:
                 items += fg.red + "(3D) " + fg.clear_color
+            if isImax3D:
+                items += fg.red + "(Imax3D) " + fg.clear_color
 
             if "ΑΙΘ" in screen_name:
                 movie_classes.append(items)
