@@ -240,12 +240,10 @@ def crawl_imdb_info(movie_dicts, index):
         imdb_id = match.imdb_id
 
         movie = imdb_get_movie(imdb_id)
+        rating = movie.rating  # float or None
+        plot = getattr(movie, "plot", None) or getattr(movie, "plot_outline", None)
 
         url_imdb = f"https://www.imdb.com/title/{imdb_id}/"
-        rating = movie.rating  # float or None
-
-        # Try plot from imdbinfo directly
-        plot = getattr(movie, "plot", None) or getattr(movie, "plot_outline", None)
 
         # Fallback: scrape IMDb page
         if not plot:
