@@ -275,7 +275,7 @@ def crawl_imdb_info(movie_dicts, index):
         movie_dicts[index]["imdb_rating"] = rating
         movie_dicts[index]["imdb_url"] = url_imdb
 
-def print_movies(sorted_movies, search_day, cinema_name):
+def print_movies(sorted_movies, search_day, search_time, cinema_name):
     columns, _ = os.get_terminal_size()
 
     print()
@@ -296,6 +296,13 @@ def print_movies(sorted_movies, search_day, cinema_name):
     print(fg.clear_color)
 
     date_time = datetime.datetime.now()
+
+    if search_time:
+        hour, minute = map(int, search_time.split(":"))
+        ref_time = datetime.time(hour, minute)
+    else:
+        ref_time = date_time.time()
+
     today = date_time.strftime("%d/%m")
 
     no_longer_playing_today = 0
@@ -327,11 +334,11 @@ def print_movies(sorted_movies, search_day, cinema_name):
             if delta != None:
                 end_time = formated_time + delta
 
-            if search_day == today and formated_time.time() > date_time.now().time():
+            if search_day == today and formated_time.time() > ref_time:
                 movie_start_times.append(time)
                 if delta != None:
                     movie_end_times.append(end_time.strftime("%H:%M"))
-            elif search_day == today and formated_time.time() < date_time.now().time():
+            elif search_day == today and formated_time.time() < ref_time:
                 if index == len(movie["days"][search_day]) - 1:
                     no_longer_playing_today += 1
                 continue
@@ -477,7 +484,7 @@ def main():
     cinemas["Volos - Volos Village"] = "23"
     cinemas["Larissa - Fashion City Outlet"] = "30"
 
-    cinema_id = cinemas["Maroussi - The Mall Athens"]
+    cinema_id = cinemas["Rentis - Village Shopping and more..."]
 
     cinema_name = next((k for k, v in cinemas.items() if v == cinema_id), None)
 
@@ -551,14 +558,16 @@ def main():
     date_time = datetime.datetime.now()
     search_day = date_time.strftime("%d/%m")
 
-    if len(sys.argv) == 2 and sys.argv[1] != "clear":
-        search_day = sys.argv[1]
+    search_time = None
+    if len(sys.argv) >= 2 and sys.argv[1] != "clear":
+        search_day = sys.argv[1]          # format: 25/04
+        search_time = sys.argv[2] if len(sys.argv) >= 3 else None  # format: 20:51
 
     sorted_movies = [
         movie for movie in sorted_movies if search_day in movie["days"].keys()
     ]
 
-    print_movies(sorted_movies, search_day, cinema_name)
+    print_movies(sorted_movies, search_day, search_time, cinema_name)
 
 
 if __name__ == "__main__":
