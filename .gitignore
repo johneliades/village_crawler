@@ -1,5 +1,20 @@
-.venv
+# Virtual environment
+.venv/
 pyvenv.cfg
+
+# Cache
+.cache/
 *.pkl
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Misc
 response_content.txt
-.cache/imdbinfo/waf_cookies.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
