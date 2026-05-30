@@ -473,12 +473,11 @@ def print_movies(
         bar_char = "\u2501"
         print(f"{fg.cyan}{bar_char * half}{title_str}{fg.cyan}{bar_char * half}{fg.reset}")
 
-        # Links
-        links = fg.grey + urllib.parse.quote(movie["village_url"], safe=":/")
+        print(center(fg.grey + urllib.parse.quote(movie["village_url"], safe=":/"), cols))
         if movie["trailer_url"]:
-            links += "  " + movie["trailer_url"]
-        links += fg.reset
-        print(center(links, cols))
+            print(center(fg.grey + urllib.parse.quote(movie["trailer_url"], safe=":/"), cols))
+        
+        print(fg.reset)
 
         # Showtimes
         times_line = "  ".join(entries)
