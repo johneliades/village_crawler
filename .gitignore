@@ -11,9 +11,6 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Misc
-response_content.txt
-
 # IDE
 .idea/
 .vscode/

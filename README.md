@@ -11,11 +11,12 @@ presents everything in a colourful, sorted terminal view.
 ## Features
 
 - Scrapes the Village Cinemas WebTicketing API for live showtimes & availability
-- Enriches each movie with its IMDB rating and plot (multi-threaded)
+- Enriches each movie with its IMDB rating (multi-threaded, Greek titles transliterated)
 - Sorts movies by IMDB rating (highest first)
-- Interactive cinema picker or pass a cinema ID via CLI
+- Interactive cinema picker or pass the menu number via CLI
 - Smart JSON cache (auto-expires after 12 hours or when dates go stale)
 - Tags for Dolby, Sphera, VMax, IMAX, 3D, Gold screens
+- Ticket price next to each showtime, fetched from the Village site (Wednesday discount applied)
 
 ## Installation
 
@@ -46,8 +47,9 @@ Activate the virtual environment first, then:
 # Interactive cinema picker, today's showtimes
 python village_crawler.py
 
-# Specify a cinema by ID
-python village_crawler.py -c 01
+# Specify a cinema by menu number or part of its name
+python village_crawler.py -c 1
+python village_crawler.py -c maroussi
 
 # Specific date (DD/MM)
 python village_crawler.py -d 25/06
@@ -61,22 +63,35 @@ python village_crawler.py --no-cache
 # Clear cache and re-fetch
 python village_crawler.py --clear
 
-# List available cinema IDs
+# List cinemas with their menu numbers
 python village_crawler.py --list
 ```
 
-### Cinema IDs
+### Cinemas
 
-| ID | Cinema                              |
-|----|-------------------------------------|
-| 21 | Maroussi – The Mall Athens          |
-| 01 | Rentis – Village Shopping and more… |
-| 22 | Thessaloniki – Mediterranean Cosmos |
-| 26 | Agios Dimitrios – Athens Metro Mall |
-| 03 | Pagrati – Pagrati Village           |
-| 23 | Volos – Volos Village               |
-| 30 | Larissa – Fashion City Outlet       |
+| # | Cinema                              |
+|---|-------------------------------------|
+| 1 | Maroussi – The Mall Athens          |
+| 2 | Rentis – Village Shopping and more… |
+| 3 | Thessaloniki – Mediterranean Cosmos |
+| 4 | Agios Dimitrios – Athens Metro Mall |
+| 5 | Pagrati – Pagrati Village           |
+| 6 | Volos – Volos Village               |
+| 7 | Larissa – Fashion City Outlet       |
 
+
+## Project layout
+
+```
+village_crawler.py      Entry point: CLI arguments, cinema picker, main()
+crawler/
+├── village.py          Cinema list and showtime scraper for the Village site
+├── prices.py           Ticket prices from the Village site, price per showtime
+├── imdb_lookup.py      IMDB search (incl. Greek title transliteration), ratings
+├── cache.py            JSON cache of crawled movies (stored in .cache/)
+├── display.py          Prints the movie list (showtimes, tags, prices, plots)
+└── terminal.py         ANSI colours and centring helpers
+```
 
 ## Cache
 
